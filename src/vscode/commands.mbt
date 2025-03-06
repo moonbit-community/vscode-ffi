@@ -6,7 +6,11 @@ extern "js" fn Commands::register_command_ffi(
   command_id : String,
   callback : async (Array[@js.Value]) -> Unit!
 ) -> VSDisposable =
-  #|(id, callback) => vscode.commands.registerCommand(id, (...args) => callback(args))
+  #|(id, callback) => {
+  #|  vscode.commands.registerCommand(id, (...args) => {
+  #|    return new Promise((res, rej) => callback(args, res, rej))
+  #|  })
+  #|}
 
 ///|
 extern "js" fn Commands::register_text_editor_command_ffi(
@@ -16,11 +20,18 @@ extern "js" fn Commands::register_text_editor_command_ffi(
   #|(id, callback) => vscode.commands.registerTextEditorCommand(id, (editor) => callback(editor))
 
 ///|
+extern "js" fn Commands::execute_command_ffi(
+  command_id : String,
+  args : Array[@js.Value]
+) -> @js.Promise =
+  #|(id, args) => vscode.commands.executeCommand(id, ...args)
+
+///|
 pub fn Commands::register_command[T](
   command_id : String,
   callback : async (Array[@js.Value]) -> T!
 ) -> VSDisposable {
-  Commands::register_command_ffi(command_id, fn(args) {
+  Commands::register_command_ffi(command_id, async fn(args) {
     @js.Promise::new(async fn() { callback!!(args) }).wait!!().cast()
   })
 }
@@ -34,4 +45,12 @@ pub fn Commands::register_text_editor_command(
     @js.Promise::new(async fn() { callback!!(editor) }) |> ignore
   }
   Commands::register_text_editor_command_ffi(command_id, callback)
+}
+
+///|
+pub async fn Commands::execute_command[T](
+  command_id : String,
+  args : Array[@js.Value]
+) -> T! {
+  Commands::execute_command_ffi(command_id, args).wait!!().cast()
 }
