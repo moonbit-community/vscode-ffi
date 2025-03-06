@@ -1,0 +1,17 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "../js-ffi"
+    },
+    {
+      "path": "../moonbit-guess-number"
+    },
+    {
+      "path": "../vscode"
+    }
+  ],
+  "settings": {}
+}
