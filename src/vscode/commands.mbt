@@ -1,4 +1,28 @@
 ///|
+pub extern type VSDisposable
+
+///|
+extern "js" fn VSDisposable::dispose(self : VSDisposable) =
+  #|(self) => self.dispose()
+
+///|
+trait Disposable {
+  dispose(Self) -> Unit
+}
+
+///|
+impl Disposable for VSDisposable with dispose(self) {
+  self.dispose()
+}
+
+///|
+pub fn &Disposable::to_vs(self : &Disposable) -> VSDisposable {
+  let object = @js.Object::new()
+  object["dispose"] = fn() { self.dispose() }
+  object._.cast()
+}
+
+///|
 pub extern type Commands
 
 ///|
@@ -16,7 +40,7 @@ extern "js" fn Commands::register_command_ffi(
 extern "js" fn Commands::register_text_editor_command_ffi(
   command_id : String,
   callback : (TextEditor) -> Unit
-) -> Unit =
+) -> VSDisposable =
   #|(id, callback) => vscode.commands.registerTextEditorCommand(id, (editor) => callback(editor))
 
 ///|
@@ -40,7 +64,7 @@ pub fn Commands::register_command[T](
 pub fn Commands::register_text_editor_command(
   command_id : String,
   callback : async (TextEditor) -> Unit!
-) -> Unit {
+) -> VSDisposable {
   let callback = fn(editor) {
     @js.Promise::new(async fn() { callback!!(editor) }) |> ignore
   }

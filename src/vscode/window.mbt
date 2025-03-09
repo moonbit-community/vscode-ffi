@@ -92,4 +92,65 @@ pub async fn Window::show_information_message_items[T](
 }
 
 ///|
+extern "js" fn Window::show_input_box_ffi(
+  args : Array[@js.Value]
+) -> @js.Promise =
+  #|(args) => vscode.window.showInputBox(...args)
+
+///|
+struct InputBoxOptions {
+  title : String?
+  value : String?
+  prompt : String?
+  place_holder : String?
+  validate_input : ((String) -> String?)?
+}
+
+///|
+fn validate_input_to_js(validate_input : (String) -> String?) -> @js.Value {
+  let js_fn = fn(input : @js.Value) -> @js.Value {
+    let arg = input.cast()
+    let result = validate_input(arg)
+    @js.Value::cast_from(@js.Optional::from_option(result))
+  }
+  @js.Value::cast_from(js_fn)
+}
+
+///|
+pub fn InputBoxOptions::new(
+  title? : String,
+  value? : String,
+  prompt? : String,
+  place_holder? : String,
+  validate_input? : (String) -> String?
+) -> InputBoxOptions {
+  InputBoxOptions::{ title, value, prompt, place_holder, validate_input }
+}
+
+///|
+fn InputBoxOptions::to_js(self : InputBoxOptions) -> @js.Value {
+  let object = @js.Object::new()
+  object["title"] = @js.Optional::from_option(self.title)
+  object["value"] = @js.Optional::from_option(self.value)
+  object["prompt"] = @js.Optional::from_option(self.prompt)
+  object["placeHolder"] = @js.Optional::from_option(self.place_holder)
+  object["validateInput"] = @js.Optional::from_option(
+    self.validate_input.map(validate_input_to_js),
+  )
+  object._
+}
+
+///|
+pub async fn Window::show_input_box(options? : InputBoxOptions) -> String?! {
+  let args : Array[@js.Value] = []
+  if options is Some(options) {
+    args.push(options.to_js())
+  }
+  let js_string : @js.Optional[@js.Value] = Window::show_input_box_ffi(args)
+    .wait!!()
+    .cast()
+  js_string.to_option().map(fn(value) { value.cast() })
+}
+
+///|
 pub extern "js" fn Window::get_active_text_editor() -> TextEditor = "() => vscode.window.activeTextEditor"
